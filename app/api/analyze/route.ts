@@ -181,13 +181,18 @@ export async function POST(request: NextRequest) {
     if (!anthropicResponse.ok) { const errorText = await anthropicResponse.text(); return NextResponse.json({ error: `Claude API error: ${errorText}` }, { status: 500 }) }
     const anthropicData = await anthropicResponse.json()
     const responseText = anthropicData.content?.[0]?.text || ''
-    let llmResult
-    try {
-      let jsonStr = responseText
-      if (responseText.includes('```json')) jsonStr = responseText.split('```json')[1].split('```')[0]
-      else if (responseText.includes('```')) jsonStr = responseText.split('```')[1].split('```')[0]
-      llmResult = JSON.parse(jsonStr.trim())
-    } catch { return NextResponse.json({ error: 'Failed to parse Claude response' }, { status: 500 }) }
+let llmResult
+try {
+  let jsonStr = responseText
+  if (responseText.includes('```json')) jsonStr = responseText.split('```json')[1].split('```')[0]
+  else if (responseText.includes('```')) jsonStr = responseText.split('```')[1].split('```')[0]
+  llmResult = JSON.parse(jsonStr.trim())
+} catch (parseError) { 
+  return NextResponse.json({ 
+    error: 'Failed to parse Claude response', 
+    debug: { parseError: String(parseError), responsePreview: responseText.slice(0, 500), responseLength: responseText.length }
+  }, { status: 500 }) 
+}
     const result = {
       episode: { title: episodeTitle, url },
       summary: llmResult.summary || '',

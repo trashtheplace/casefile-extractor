@@ -93,28 +93,58 @@ function extractLinks(html: string, baseUrl: string): string[] {
 
 function extractImages(html: string, pageUrl: string, pageTitle: string): ImageCandidate[] {
   const images: ImageCandidate[] = []
+  
+  // Skip patterns for irrelevant images
+  const skipPatterns = [
+    /logo/i, /icon/i, /avatar/i, /button/i, /banner/i, /advertisement/i,
+    /sprite/i, /placeholder/i, /loading/i, /spinner/i, /arrow/i,
+    /facebook/i, /twitter/i, /instagram/i, /linkedin/i, /pinterest/i,
+    /share/i, /social/i, /emoji/i, /badge/i, /widget/i
+  ]
+  
+  // First, get og:image (usually the main article photo)
+  const ogMatch = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+  if (ogMatch) {
+    const imageUrl = normalizeUrl(ogMatch[1], pageUrl)
+    if (imageUrl && isImageUrl(imageUrl)) {
+      images.push({ url: imageUrl, alt: pageTitle + ' (main)', caption: '', context: '', sourcePageUrl: pageUrl, sourcePageTitle: pageTitle })
+    }
+  }
+  
+  // Then get article images, filtered
   const regex = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi
   let match
   while ((match = regex.exec(html)) !== null && images.length < CONFIG.maxImagesPerPage) {
-    const src = match[0]
+    const imgTag = match[0]
     const srcUrl = match[1]
+    
+    // Skip if URL matches skip patterns
+    if (skipPatterns.some(p => p.test(srcUrl))) continue
+    
     const imageUrl = normalizeUrl(srcUrl, pageUrl)
     if (!imageUrl || !isImageUrl(imageUrl)) continue
-    const altMatch = src.match(/alt=["']([^"']*)["']/i)
+    
+    // Skip duplicates
+    if (images.some(i => i.url === imageUrl)) continue
+    
+    const altMatch = imgTag.match(/alt=["']([^"']*)["']/i)
     const alt = altMatch ? altMatch[1] : ''
-    const widthMatch = src.match(/width=["']?(\d+)/i)
+    
+    // Skip if alt text matches skip patterns
+    if (skipPatterns.some(p => p.test(alt))) continue
+    
+    // Skip tiny images
+    const widthMatch = imgTag.match(/width=["']?(\d+)/i)
+    const heightMatch = imgTag.match(/height=["']?(\d+)/i)
     const width = widthMatch ? parseInt(widthMatch[1]) : 999
-    if (width < 100) continue
+    const height = heightMatch ? parseInt(heightMatch[1]) : 999
+    if (width < 150 || height < 150) continue
+    
     images.push({ url: imageUrl, alt, caption: '', context: '', sourcePageUrl: pageUrl, sourcePageTitle: pageTitle })
   }
-  const ogMatch = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
-  if (ogMatch && images.length < CONFIG.maxImagesPerPage) {
-    const imageUrl = normalizeUrl(ogMatch[1], pageUrl)
-    if (imageUrl && isImageUrl(imageUrl)) {
-      images.push({ url: imageUrl, alt: pageTitle, caption: '', context: '', sourcePageUrl: pageUrl, sourcePageTitle: pageTitle })
-    }
-  }
+  
   return images
+}
 }
 
 function buildPrompt(episodeTitle: string, episodeText: string, sourcePages: SourcePage[], allImages: ImageCandidate[]): string {

@@ -67,15 +67,29 @@ function extractTitle(html: string): string {
 
 function extractLinks(html: string, baseUrl: string): string[] {
   const links: string[] = []
+  
+  // Find RESOURCES section specifically
+  const resourcesMatch = html.match(/RESOURCES[\s\S]*?(?=<\/article|<footer|$)/i)
+  const searchArea = resourcesMatch ? resourcesMatch[0] : html
+  
   const regex = /<a[^>]+href=["']([^"']+)["'][^>]*>/gi
   let match
-  while ((match = regex.exec(html)) !== null) {
+  while ((match = regex.exec(searchArea)) !== null) {
     const normalized = normalizeUrl(match[1], baseUrl)
-    if (normalized && !normalized.includes('casefilepodcast.com')) {
+    if (normalized && 
+        !normalized.includes('casefilepodcast.com') &&
+        !normalized.includes('facebook.com') &&
+        !normalized.includes('instagram.com') &&
+        !normalized.includes('twitter.com') &&
+        !normalized.includes('spotify.com') &&
+        !normalized.includes('apple.com/podcast') &&
+        !normalized.includes('patreon.com') &&
+        !normalized.includes('soundcloud.com')) {
       links.push(normalized)
     }
   }
-return Array.from(new Set(links)).slice(0, CONFIG.maxSources)}
+  return Array.from(new Set(links)).slice(0, CONFIG.maxSources)
+}
 
 function extractImages(html: string, pageUrl: string, pageTitle: string): ImageCandidate[] {
   const images: ImageCandidate[] = []

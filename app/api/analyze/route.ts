@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
-import * as cheerio from 'cheerio'
+import * as cheerio from 'cheerio' 
+export const runtime = 'nodejs'
 
 // Configuration
 const CONFIG = {

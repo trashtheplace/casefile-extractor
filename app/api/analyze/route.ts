@@ -145,7 +145,6 @@ function extractImages(html: string, pageUrl: string, pageTitle: string): ImageC
   
   return images
 }
-}
 
 function buildPrompt(episodeTitle: string, episodeText: string, sourcePages: SourcePage[], allImages: ImageCandidate[]): string {
   const imageList = allImages.slice(0, 30).map((img, i) => `[IMG_${i}] URL: ${img.url} | Alt: ${img.alt || '(none)'} | Source: ${img.sourcePageTitle}`).join('\n')

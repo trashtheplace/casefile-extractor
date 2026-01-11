@@ -52,7 +52,7 @@ export default function Home() {
     setLoading(true)
     setError('')
     setResult(null)
-    setStatus('Starting analysis...')
+    setStatus('Analyzing episode... This may take 30-60 seconds.')
 
     try {
       const response = await fetch('/api/analyze', {
@@ -61,39 +61,20 @@ export default function Home() {
         body: JSON.stringify({ url: url.trim() }),
       })
 
-      // Handle streaming response
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
+      const data = await response.json()
 
-      if (!reader) throw new Error('No response body')
-
-      let fullText = ''
-      
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        
-        const chunk = decoder.decode(value)
-        fullText += chunk
-        
-        // Parse status updates
-        const lines = fullText.split('\n')
-        for (const line of lines) {
-          if (line.startsWith('STATUS:')) {
-            setStatus(line.replace('STATUS:', '').trim())
-          }
-        }
+      if (!response.ok || data.error) {
+        setError(data.error || `Request failed: ${response.status}`)
+      } else {
+        setResult(data)
       }
-
-      // Find the JSON result
-      const jsonMatch = fullText.match(/RESULT:([\s\S]+)$/m)
-      if (jsonMatch) {
-        const data = JSON.parse(jsonMatch[1])
-        if (data.error) {
-          setError(data.error)
-        } else {
-          setResult(data)
-        }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+    } finally {
+      setLoading(false)
+      setStatus('')
+    }
+  }
       } else {
         setError('Failed to parse response')
       }

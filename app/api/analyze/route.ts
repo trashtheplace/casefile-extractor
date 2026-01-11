@@ -75,8 +75,7 @@ function extractLinks(html: string, baseUrl: string): string[] {
       links.push(normalized)
     }
   }
-  return [...new Set(links)].slice(0, CONFIG.maxSources)
-}
+return Array.from(new Set(links)).slice(0, CONFIG.maxSources)}
 
 function extractImages(html: string, pageUrl: string, pageTitle: string): ImageCandidate[] {
   const images: ImageCandidate[] = []
